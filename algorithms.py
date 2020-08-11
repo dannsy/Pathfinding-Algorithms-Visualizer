@@ -1,3 +1,4 @@
+import random
 import time
 from collections import deque, namedtuple
 from queue import PriorityQueue
@@ -362,11 +363,8 @@ class Algorithms:
 
         if col != self.num_cols - 1:
             right_node = self.nodes[row, col + 1]
-            if (
-                right_node.mode != 1
-                and not self.visited[row, col + 1]
-                and new_dist < self.shortest_dists[row, col + 1]
-            ):
+            dist_bool = new_dist < self.shortest_dists[row, col + 1]
+            if right_node.mode != 1 and not self.visited[row, col + 1] and dist_bool:
                 # only add node if node is unvisited and isn't a wall
                 right_node.mode = 5
                 self.count += 1
@@ -376,11 +374,8 @@ class Algorithms:
 
         if row != 0:
             above_node = self.nodes[row - 1, col]
-            if (
-                above_node.mode != 1
-                and not self.visited[row - 1, col]
-                and new_dist < self.shortest_dists[row - 1, col]
-            ):
+            dist_bool = new_dist < self.shortest_dists[row - 1, col]
+            if above_node.mode != 1 and not self.visited[row - 1, col] and dist_bool:
                 # only add node if node is unvisited and isn't a wall
                 above_node.mode = 5
                 self.count += 1
@@ -390,11 +385,8 @@ class Algorithms:
 
         if col != 0:
             left_node = self.nodes[row, col - 1]
-            if (
-                left_node.mode != 1
-                and not self.visited[row, col - 1]
-                and new_dist < self.shortest_dists[row, col - 1]
-            ):
+            dist_bool = new_dist < self.shortest_dists[row, col - 1]
+            if left_node.mode != 1 and not self.visited[row, col - 1] and dist_bool:
                 # only add node if node is unvisited and isn't a wall
                 left_node.mode = 5
                 self.count += 1
@@ -404,11 +396,8 @@ class Algorithms:
 
         if row != self.num_rows - 1:
             below_node = self.nodes[row + 1, col]
-            if (
-                below_node.mode != 1
-                and not self.visited[row + 1, col]
-                and new_dist < self.shortest_dists[row + 1, col]
-            ):
+            dist_bool = new_dist < self.shortest_dists[row + 1, col]
+            if below_node.mode != 1 and not self.visited[row + 1, col] and dist_bool:
                 # only add node if node is unvisited and isn't a wall
                 below_node.mode = 5
                 self.count += 1
@@ -418,6 +407,8 @@ class Algorithms:
 
     @_timer
     def astar(self):
+        """A* pathfinding algorithm
+        """
         self.reset_maze()
         row, col = self.start.get_pos()
         self.shortest_dists[row, col] = 0
@@ -455,11 +446,8 @@ class Algorithms:
 
         if col != self.num_cols - 1:
             right_node = self.nodes[row, col + 1]
-            if (
-                right_node.mode != 1
-                and not self.visited[row, col + 1]
-                and new_dist < self.shortest_dists[row, col + 1]
-            ):
+            dist_bool = new_dist < self.shortest_dists[row, col + 1]
+            if right_node.mode != 1 and not self.visited[row, col + 1] and dist_bool:
                 # only add node if node is unvisited and isn't a wall
                 right_node.mode = 5
                 self.count += 1
@@ -470,11 +458,8 @@ class Algorithms:
 
         if row != 0:
             above_node = self.nodes[row - 1, col]
-            if (
-                above_node.mode != 1
-                and not self.visited[row - 1, col]
-                and new_dist < self.shortest_dists[row - 1, col]
-            ):
+            dist_bool = new_dist < self.shortest_dists[row - 1, col]
+            if above_node.mode != 1 and not self.visited[row - 1, col] and dist_bool:
                 # only add node if node is unvisited and isn't a wall
                 above_node.mode = 5
                 self.count += 1
@@ -485,11 +470,8 @@ class Algorithms:
 
         if col != 0:
             left_node = self.nodes[row, col - 1]
-            if (
-                left_node.mode != 1
-                and not self.visited[row, col - 1]
-                and new_dist < self.shortest_dists[row, col - 1]
-            ):
+            dist_bool = new_dist < self.shortest_dists[row, col - 1]
+            if left_node.mode != 1 and not self.visited[row, col - 1] and dist_bool:
                 # only add node if node is unvisited and isn't a wall
                 left_node.mode = 5
                 self.count += 1
@@ -500,11 +482,8 @@ class Algorithms:
 
         if row != self.num_rows - 1:
             below_node = self.nodes[row + 1, col]
-            if (
-                below_node.mode != 1
-                and not self.visited[row + 1, col]
-                and new_dist < self.shortest_dists[row + 1, col]
-            ):
+            dist_bool = new_dist < self.shortest_dists[row + 1, col]
+            if below_node.mode != 1 and not self.visited[row + 1, col] and dist_bool:
                 # only add node if node is unvisited and isn't a wall
                 below_node.mode = 5
                 self.count += 1
@@ -529,6 +508,119 @@ class Algorithms:
             end_row, end_col = self.end.get_pos()
 
         return abs(end_row - row) + abs(end_col - col)
+
+    @_timer
+    def generate_maze(self, mode):
+        """Depth-first-search algorithm to generate maze
+        """
+        # clearing all data structures used in pathfinding
+        for row in range(self.num_rows):
+            for col in range(self.num_cols):
+                self.nodes[row, col].mode = 1
+                self.visited[row, col] = False
+        self.queue = deque()
+        self.queue.append(self.start)
+        row, col = self.start.get_pos()
+        self.visited[row, col] = True
+
+        while self.queue:
+            # repeatedly get last element in queue and get nieghbors
+            cur_node = self.queue.pop()
+            row, col = cur_node.get_pos()
+
+            if self.maze_get_neighbors(cur_node, mode):
+                cur_node.mode = 0
+
+                if mode != "normal":
+                    self.visited[row, col] = True
+
+            if mode == "normal":
+                self.visited[row, col] = True
+
+        self.reset_maze()
+
+    def maze_get_neighbors(self, node, mode):
+        """Get all valid neighbors of a node
+
+        Args:
+            node (Node): target node to get neighbors of
+        """
+        row, col = node.get_pos()
+        directions = []
+        count = 0
+
+        if col != self.num_cols - 1:
+            if self.visited[row, col + 1]:
+                count += 1
+            else:
+                directions.append(self.eval_right)
+        if row != 0:
+            if self.visited[row - 1, col]:
+                count += 1
+            else:
+                directions.append(self.eval_above)
+        if col != 0:
+            if self.visited[row, col - 1]:
+                count += 1
+            else:
+                directions.append(self.eval_left)
+        if row != self.num_rows - 1:
+            if self.visited[row + 1, col]:
+                count += 1
+            else:
+                directions.append(self.eval_below)
+
+        if mode == "perfect":
+            count_limit = 2
+        elif mode == "sparse":
+            count_limit = 3
+        else:
+            count_limit = random.choice([2, 3])
+        if count >= count_limit:
+            directions = []
+
+        if directions:
+            for direction in random.sample(directions, len(directions)):
+                direction(row, col)
+            return True
+        else:
+            return False
+
+    def eval_right(self, row, col):
+        """Helper method to evaluate right node
+
+        Args:
+            row (int): row of current node
+            col (int): column of current node
+        """
+        self.queue.append(self.nodes[row, col + 1])
+
+    def eval_above(self, row, col):
+        """Helper method to evaluate above node
+
+        Args:
+            row (int): row of current node
+            col (int): column of current node
+        """
+        self.queue.append(self.nodes[row - 1, col])
+
+    def eval_left(self, row, col):
+        """Helper method to evaluate left node
+
+        Args:
+            row (int): row of current node
+            col (int): column of current node
+        """
+        self.queue.append(self.nodes[row, col - 1])
+
+    def eval_below(self, row, col):
+        """Helper method to evaluate below node
+
+        Args:
+            row (int): row of current node
+            col (int): column of current node
+        """
+        self.queue.append(self.nodes[row + 1, col])
 
     def update_gui(self):
         """Abstract method for children classes to implement.

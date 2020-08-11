@@ -28,13 +28,17 @@ class Maze(Algorithms):
     dfs_x = bfs_x + 130
     dij_x = bfs_x + 130 * 2
     astar_x = bfs_x + 130 * 3
+    per_x = bfs_x + 130 * 5
+    nor_x = bfs_x + int(130 * 6.5)
+    spa_x = bfs_x + 130 * 8
 
     bfs_but = pygame.Rect(bfs_x, but_y, but_width, but_height)
     dfs_but = pygame.Rect(dfs_x, but_y, but_width, but_height)
     dij_but = pygame.Rect(dij_x, but_y, but_width, but_height)
     astar_but = pygame.Rect(astar_x, but_y, but_width, but_height)
-
-    mode_dict = {1: "WALL", 2: "START", 3: "END"}
+    per_but = pygame.Rect(per_x, but_y, int(but_width * 1.5), but_height)
+    nor_but = pygame.Rect(nor_x, but_y, int(but_width * 1.5), but_height)
+    spa_but = pygame.Rect(spa_x, but_y, int(but_width * 1.5), but_height)
 
     def __init__(self, width, height):
         self.width = width
@@ -84,6 +88,12 @@ class Maze(Algorithms):
             self.dijkstra()
         elif self.astar_but.collidepoint(pos):
             self.astar()
+        elif self.per_but.collidepoint(pos):
+            self.generate_maze("perfect")
+        elif self.nor_but.collidepoint(pos):
+            self.generate_maze("normal")
+        elif self.spa_but.collidepoint(pos):
+            self.generate_maze("sparse")
 
     def draw_grid(self):
         """Drawing the grid lines of the maze
@@ -148,6 +158,9 @@ class Maze(Algorithms):
         pygame.draw.rect(self.display, LIGHT_GREY, self.dfs_but)
         pygame.draw.rect(self.display, LIGHT_GREY, self.dij_but)
         pygame.draw.rect(self.display, LIGHT_GREY, self.astar_but)
+        pygame.draw.rect(self.display, LIGHT_GREY, self.per_but)
+        pygame.draw.rect(self.display, LIGHT_GREY, self.nor_but)
+        pygame.draw.rect(self.display, LIGHT_GREY, self.spa_but)
 
         text = self.font.render("DFS", True, BLACK)
         text_x = self.dfs_x + (self.but_width - text.get_width()) // 2
@@ -163,6 +176,18 @@ class Maze(Algorithms):
         self.display.blit(text, (text_x, text_y))
         text = self.font.render("A*", True, BLACK)
         text_x = self.astar_x + (self.but_width - text.get_width()) // 2
+        text_y = self.but_y + (self.but_height - text.get_height()) // 2
+        self.display.blit(text, (text_x, text_y))
+        text = self.font.render("Perfect Maze", True, BLACK)
+        text_x = self.per_x + (int(self.but_width * 1.5) - text.get_width()) // 2
+        text_y = self.but_y + (self.but_height - text.get_height()) // 2
+        self.display.blit(text, (text_x, text_y))
+        text = self.font.render("Normal Maze", True, BLACK)
+        text_x = self.nor_x + (int(self.but_width * 1.5) - text.get_width()) // 2
+        text_y = self.but_y + (self.but_height - text.get_height()) // 2
+        self.display.blit(text, (text_x, text_y))
+        text = self.font.render("Sparse Maze", True, BLACK)
+        text_x = self.spa_x + (int(self.but_width * 1.5) - text.get_width()) // 2
         text_y = self.but_y + (self.but_height - text.get_height()) // 2
         self.display.blit(text, (text_x, text_y))
 
