@@ -1,4 +1,5 @@
-### implement dijkstra, A*, greedy BFS, BFS, DFS
+"""This module contains a visualizer class for the 4 pathfinding algorithms
+"""
 from collections import namedtuple
 import pygame
 
@@ -18,9 +19,11 @@ class Maze(Algorithms):
     Walls can be erected in the maze to test the pathfinding algorithms
     """
 
+    # constants for grid
     spacing = 20
     top_pad = 100
 
+    # constants for buttons
     but_width = 100
     but_height = 40
     but_y = 15
@@ -32,6 +35,7 @@ class Maze(Algorithms):
     nor_x = bfs_x + int(130 * 6.5)
     spa_x = bfs_x + 130 * 8
 
+    # rectangle of buttons
     bfs_but = pygame.Rect(bfs_x, but_y, but_width, but_height)
     dfs_but = pygame.Rect(dfs_x, but_y, but_width, but_height)
     dij_but = pygame.Rect(dij_x, but_y, but_width, but_height)
@@ -46,7 +50,6 @@ class Maze(Algorithms):
         super(Maze, self).__init__(height // self.spacing, width // self.spacing)
 
         self.display = pygame.display.set_mode((self.width, self.height))
-        self.clock = pygame.time.Clock()
         self.running = True
         self.font = pygame.font.SysFont("calibri", 20, True)
 
@@ -59,6 +62,7 @@ class Maze(Algorithms):
             pos (tuple of int): pos[0] is the x position, pos[1] is the y position
         """
         if self.solved:
+            # remove coloring of previously visited nodes
             self.reset_maze()
 
         col = pos[0] // self.spacing
@@ -80,6 +84,8 @@ class Maze(Algorithms):
                     self.end.mode = 0
                     self.end = self.nodes[row, col]
                     self.end.mode = 3
+
+        # button click detection
         elif self.bfs_but.collidepoint(pos):
             self.bfs()
         elif self.dfs_but.collidepoint(pos):
@@ -99,6 +105,7 @@ class Maze(Algorithms):
         """Drawing the grid lines of the maze
         """
         for i in range(self.num_rows):
+            # drawing horizontal lines
             pygame.draw.line(
                 self.display,
                 BLUE,
@@ -107,6 +114,7 @@ class Maze(Algorithms):
                 1,
             )
         for i in range(self.num_cols):
+            # drawing vertical lines
             pygame.draw.line(
                 self.display,
                 BLUE,
@@ -118,6 +126,7 @@ class Maze(Algorithms):
         """Drawing the nodes (boxes) of the maze
         """
         s_row, s_col = self.start.get_pos()
+        # used to calculate gradual color change of visited nodes
         max_dist = self.num_rows + self.num_cols
 
         for row in range(self.num_rows):
@@ -126,9 +135,11 @@ class Maze(Algorithms):
                 node.enforce_color()
 
                 if node.mode == 6:
+                    # change visited nodes color according to distance from start node
                     dist = self.manhattan_dist(row, col, s_row, s_col) / max_dist
                     color = Color(250, 220 - 180 * dist, 40 + 180 * dist)
                 else:
+                    # all other types of node have a constant color
                     color = node.color
 
                 if node.mode not in (2, 3):
@@ -143,6 +154,7 @@ class Maze(Algorithms):
                         ),
                     )
                 else:
+                    # if node is start or end node, draw circle instead of square
                     pygame.draw.circle(
                         self.display,
                         color,
@@ -154,6 +166,9 @@ class Maze(Algorithms):
                     )
 
     def draw_buts(self):
+        """Drawing all buttons and their text
+        """
+        # drawing all buttons
         pygame.draw.rect(self.display, LIGHT_GREY, self.bfs_but)
         pygame.draw.rect(self.display, LIGHT_GREY, self.dfs_but)
         pygame.draw.rect(self.display, LIGHT_GREY, self.dij_but)
@@ -162,6 +177,7 @@ class Maze(Algorithms):
         pygame.draw.rect(self.display, LIGHT_GREY, self.nor_but)
         pygame.draw.rect(self.display, LIGHT_GREY, self.spa_but)
 
+        # drawing button text
         text = self.font.render("DFS", True, BLACK)
         text_x = self.dfs_x + (self.but_width - text.get_width()) // 2
         text_y = self.but_y + (self.but_height - text.get_height()) // 2
@@ -237,7 +253,6 @@ class Maze(Algorithms):
                     if keys[pygame.K_LCTRL] and keys[pygame.K_c]:
                         self.clear_maze()
 
-            # self.clock.tick(60)
             self.update_gui()
 
 

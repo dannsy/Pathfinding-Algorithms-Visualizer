@@ -1,3 +1,7 @@
+"""This module contains the Algorithms class which contains the
+implementation of 4 graph traversal/pathfinding algorithms: Depth-first search,
+Breath-first search, Dijkstra's algorithm, and A* pathfinding algorithm
+"""
 import random
 import time
 from collections import deque, namedtuple
@@ -19,6 +23,12 @@ PEACH = Color(255, 218, 185)
 
 
 def _timer(func):
+    """Measure the time taken to execute func
+
+    Args:
+        func (def): function to have execution time measured
+    """
+
     def wrapper(*args, **kwargs):
         start_time = time.time()
         func(*args, *kwargs)
@@ -48,11 +58,9 @@ class Algorithms:
             6: GREY,
         }
 
-        def __init__(self, row, col, num_rows, num_cols):
+        def __init__(self, row, col):
             self.row = row
             self.col = col
-            self.num_rows = num_rows
-            self.num_cols = num_cols
 
             # 0 for empty, 1 for wall, 2 for start, 3 for end, 4 for path
             # 5 for added to queue, 6 for visited
@@ -75,6 +83,7 @@ class Algorithms:
             Args:
                 value (int): intended new mode for this node
             """
+            # only white nodes can overwrite wall, start, or end nodes
             if self._mode in (0, 4, 5, 6) or (self._mode in (1, 2, 3) and value == 0):
                 self._mode = value
 
@@ -101,14 +110,17 @@ class Algorithms:
         self.nodes = np.zeros((num_rows, num_cols), dtype=Algorithms.Node)
         for row in range(num_rows):
             for col in range(num_cols):
-                self.nodes[row, col] = Algorithms.Node(row, col, num_rows, num_cols)
+                self.nodes[row, col] = Algorithms.Node(row, col)
         # 2D array to mark visited nodes
         self.visited = np.zeros((num_rows, num_cols), dtype=bool)
-        # 2D array to mark each nodes previous node
+        # 2D array to mark each nodes previous node (parent)
         self.paths = np.zeros((num_rows, num_cols), dtype=Algorithms.Node)
         longest_dist = (self.num_rows * self.num_cols) * 10
         # 2D array to keep track of shortest path from start to each node
         self.shortest_dists = np.full((num_rows, num_cols), longest_dist, dtype=int)
+        # can represent LIFO stack, FIFO queue, or Priority Queue
+        self.queue = None
+        # used to break ties in priority queue
         self.count = 0
 
         # 1 for building walls, 2 for start position, 3 for end position
@@ -119,7 +131,6 @@ class Algorithms:
         self.end.mode = 3
 
         self.solved = False
-        self.queue = None
 
     def clear_maze(self):
         """Clears the entire maze so remove all walls and visited
@@ -159,7 +170,7 @@ class Algorithms:
         self.solved = False
 
     def print_path(self):
-        """Print the shortest path to screen
+        """Print the shortest path on screen
         """
         end_row, end_col = self.end.get_pos()
         pointer = self.paths[end_row, end_col]
@@ -174,8 +185,13 @@ class Algorithms:
 
             self.update_gui()
 
+            if pointer == self.start:
+                print(f"Path found! Length of path is : {length}")
+                break
+        else:
+            print("No path found...")
+
         self.solved = True
-        print(f"Length of path is: {length}")
 
     @_timer
     def bfs(self):
@@ -365,7 +381,8 @@ class Algorithms:
             right_node = self.nodes[row, col + 1]
             dist_bool = new_dist < self.shortest_dists[row, col + 1]
             if right_node.mode != 1 and not self.visited[row, col + 1] and dist_bool:
-                # only add node if node is unvisited and isn't a wall
+                # only add node if node is unvisited, isn't a wall,
+                # and has current shortest path longer than new dist
                 right_node.mode = 5
                 self.count += 1
                 self.queue.put((new_dist, self.count, right_node))
@@ -376,7 +393,8 @@ class Algorithms:
             above_node = self.nodes[row - 1, col]
             dist_bool = new_dist < self.shortest_dists[row - 1, col]
             if above_node.mode != 1 and not self.visited[row - 1, col] and dist_bool:
-                # only add node if node is unvisited and isn't a wall
+                # only add node if node is unvisited, isn't a wall
+                # and has current shortest path longer than new dist
                 above_node.mode = 5
                 self.count += 1
                 self.queue.put((new_dist, self.count, above_node))
@@ -387,7 +405,8 @@ class Algorithms:
             left_node = self.nodes[row, col - 1]
             dist_bool = new_dist < self.shortest_dists[row, col - 1]
             if left_node.mode != 1 and not self.visited[row, col - 1] and dist_bool:
-                # only add node if node is unvisited and isn't a wall
+                # only add node if node is unvisited, isn't a wall
+                # and has current shortest path longer than new dist
                 left_node.mode = 5
                 self.count += 1
                 self.queue.put((new_dist, self.count, left_node))
@@ -398,7 +417,8 @@ class Algorithms:
             below_node = self.nodes[row + 1, col]
             dist_bool = new_dist < self.shortest_dists[row + 1, col]
             if below_node.mode != 1 and not self.visited[row + 1, col] and dist_bool:
-                # only add node if node is unvisited and isn't a wall
+                # only add node if node is unvisited, isn't a wall
+                # and has current shortest path longer than new dist
                 below_node.mode = 5
                 self.count += 1
                 self.queue.put((new_dist, self.count, below_node))
@@ -419,7 +439,7 @@ class Algorithms:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
-            # repeatedly get element with shortest distance and get neighbors
+            # repeatedly get element with lowest f score and get neighbors
             cur_node = self.queue.get()[2]
 
             if cur_node is self.end:
@@ -448,7 +468,8 @@ class Algorithms:
             right_node = self.nodes[row, col + 1]
             dist_bool = new_dist < self.shortest_dists[row, col + 1]
             if right_node.mode != 1 and not self.visited[row, col + 1] and dist_bool:
-                # only add node if node is unvisited and isn't a wall
+                # only add node if node is unvisited, isn't a wall
+                # and has current shortest path longer than new dist
                 right_node.mode = 5
                 self.count += 1
                 heuristic = self.manhattan_dist(row, col + 1)
@@ -460,7 +481,8 @@ class Algorithms:
             above_node = self.nodes[row - 1, col]
             dist_bool = new_dist < self.shortest_dists[row - 1, col]
             if above_node.mode != 1 and not self.visited[row - 1, col] and dist_bool:
-                # only add node if node is unvisited and isn't a wall
+                # only add node if node is unvisited, isn't a wall
+                # and has current shortest path longer than new dist
                 above_node.mode = 5
                 self.count += 1
                 heuristic = self.manhattan_dist(row - 1, col)
@@ -472,7 +494,8 @@ class Algorithms:
             left_node = self.nodes[row, col - 1]
             dist_bool = new_dist < self.shortest_dists[row, col - 1]
             if left_node.mode != 1 and not self.visited[row, col - 1] and dist_bool:
-                # only add node if node is unvisited and isn't a wall
+                # only add node if node is unvisited, isn't a wall
+                # and has current shortest path longer than new dist
                 left_node.mode = 5
                 self.count += 1
                 heuristic = self.manhattan_dist(row, col - 1)
@@ -484,7 +507,8 @@ class Algorithms:
             below_node = self.nodes[row + 1, col]
             dist_bool = new_dist < self.shortest_dists[row + 1, col]
             if below_node.mode != 1 and not self.visited[row + 1, col] and dist_bool:
-                # only add node if node is unvisited and isn't a wall
+                # only add node if node is unvisited, isn't a wall
+                # and has current shortest path longer than new dist
                 below_node.mode = 5
                 self.count += 1
                 heuristic = self.manhattan_dist(row + 1, col)
@@ -509,11 +533,10 @@ class Algorithms:
 
         return abs(end_row - row) + abs(end_col - col)
 
-    @_timer
     def generate_maze(self, mode):
         """Depth-first-search algorithm to generate maze
         """
-        # clearing all data structures used in pathfinding
+        # walling up entire maze
         for row in range(self.num_rows):
             for col in range(self.num_cols):
                 self.nodes[row, col].mode = 1
@@ -540,7 +563,7 @@ class Algorithms:
         self.reset_maze()
 
     def maze_get_neighbors(self, node, mode):
-        """Get all valid neighbors of a node
+        """Get all valid neighbors of a node for maze
 
         Args:
             node (Node): target node to get neighbors of
@@ -551,21 +574,25 @@ class Algorithms:
 
         if col != self.num_cols - 1:
             if self.visited[row, col + 1]:
+                # if node has already been visited, do not add to queue
                 count += 1
             else:
                 directions.append(self.eval_right)
         if row != 0:
             if self.visited[row - 1, col]:
+                # if node has already been visited, do not add to queue
                 count += 1
             else:
                 directions.append(self.eval_above)
         if col != 0:
             if self.visited[row, col - 1]:
+                # if node has already been visited, do not add to queue
                 count += 1
             else:
                 directions.append(self.eval_left)
         if row != self.num_rows - 1:
             if self.visited[row + 1, col]:
+                # if node has already been visited, do not add to queue
                 count += 1
             else:
                 directions.append(self.eval_below)
@@ -576,15 +603,16 @@ class Algorithms:
             count_limit = 3
         else:
             count_limit = random.choice([2, 3])
-        if count >= count_limit:
-            directions = []
 
-        if directions:
-            for direction in random.sample(directions, len(directions)):
-                direction(row, col)
-            return True
-        else:
+        if count >= count_limit:
+            # if too many surrounding nodes have been visited
+            # then do not unwall this node
             return False
+
+        # add surrounding nodes to queue in random order
+        for direction in random.sample(directions, len(directions)):
+            direction(row, col)
+        return True
 
     def eval_right(self, row, col):
         """Helper method to evaluate right node
@@ -626,4 +654,4 @@ class Algorithms:
         """Abstract method for children classes to implement.
         Intended to update the GUI
         """
-        pass
+        raise NotImplementedError
