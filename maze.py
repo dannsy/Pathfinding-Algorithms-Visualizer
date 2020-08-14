@@ -31,15 +31,17 @@ class Maze(Algorithms):
     dfs_x = bfs_x + 130
     dij_x = bfs_x + 130 * 2
     astar_x = bfs_x + 130 * 3
-    per_x = bfs_x + 130 * 5
-    nor_x = bfs_x + int(130 * 6.5)
-    spa_x = bfs_x + 130 * 8
+    bi_astar_x = bfs_x + 130 * 4
+    per_x = bfs_x + 130 * 5 + 100
+    nor_x = bfs_x + int(130 * 6.5) + 100
+    spa_x = bfs_x + 130 * 8 + 100
 
     # rectangle of buttons
     bfs_but = pygame.Rect(bfs_x, but_y, but_width, but_height)
     dfs_but = pygame.Rect(dfs_x, but_y, but_width, but_height)
     dij_but = pygame.Rect(dij_x, but_y, but_width, but_height)
     astar_but = pygame.Rect(astar_x, but_y, but_width, but_height)
+    bi_astar_but = pygame.Rect(bi_astar_x, but_y, but_width, but_height)
     per_but = pygame.Rect(per_x, but_y, int(but_width * 1.5), but_height)
     nor_but = pygame.Rect(nor_x, but_y, int(but_width * 1.5), but_height)
     spa_but = pygame.Rect(spa_x, but_y, int(but_width * 1.5), but_height)
@@ -94,6 +96,8 @@ class Maze(Algorithms):
             self.dijkstra()
         elif self.astar_but.collidepoint(pos):
             self.astar()
+        elif self.bi_astar_but.collidepoint(pos):
+            self.bi_astar()
         elif self.per_but.collidepoint(pos):
             self.generate_maze("perfect")
         elif self.nor_but.collidepoint(pos):
@@ -134,7 +138,7 @@ class Maze(Algorithms):
                 node = self.nodes[row, col]
                 node.enforce_color()
 
-                if node.mode == 6:
+                if node.mode == 5:
                     # change visited nodes color according to distance from start node
                     dist = self.manhattan_dist(row, col, s_row, s_col) / max_dist
                     color = Color(250, 220 - 180 * dist, 40 + 180 * dist)
@@ -176,6 +180,7 @@ class Maze(Algorithms):
         pygame.draw.rect(self.display, LIGHT_GREY, self.per_but)
         pygame.draw.rect(self.display, LIGHT_GREY, self.nor_but)
         pygame.draw.rect(self.display, LIGHT_GREY, self.spa_but)
+        pygame.draw.rect(self.display, LIGHT_GREY, self.bi_astar_but)
 
         # drawing button text
         text = self.font.render("DFS", True, BLACK)
@@ -192,6 +197,10 @@ class Maze(Algorithms):
         self.display.blit(text, (text_x, text_y))
         text = self.font.render("A*", True, BLACK)
         text_x = self.astar_x + (self.but_width - text.get_width()) // 2
+        text_y = self.but_y + (self.but_height - text.get_height()) // 2
+        self.display.blit(text, (text_x, text_y))
+        text = self.font.render("Bi A*", True, BLACK)
+        text_x = self.bi_astar_x + (self.but_width - text.get_width()) // 2
         text_y = self.but_y + (self.but_height - text.get_height()) // 2
         self.display.blit(text, (text_x, text_y))
         text = self.font.render("Perfect Maze", True, BLACK)
