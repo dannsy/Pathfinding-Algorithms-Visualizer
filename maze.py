@@ -1,6 +1,8 @@
 """This module contains a visualizer class for the 4 pathfinding algorithms
 """
+import sys
 from collections import namedtuple
+
 import pygame
 
 from algorithms import Algorithms
@@ -65,7 +67,7 @@ class Maze(Algorithms):
         """
         if self.solved:
             # remove coloring of previously visited nodes
-            self.reset_maze()
+            self.set_maze_state("reset")
 
         col = pos[0] // self.spacing
         row = (pos[1] - self.top_pad) // self.spacing
@@ -247,6 +249,7 @@ class Maze(Algorithms):
                 if event.type == pygame.QUIT:
                     self.running = False
                     pygame.quit()
+                    sys.exit()
                 if pygame.mouse.get_pressed()[0]:
                     # if user has left clicked on mouse
                     self.click_pos(pygame.mouse.get_pos())
@@ -258,9 +261,9 @@ class Maze(Algorithms):
                     if keys[pygame.K_m]:
                         self.mode = (self.mode) % 3 + 1
                     if keys[pygame.K_LCTRL] and keys[pygame.K_r]:
-                        self.reset_maze()
+                        self.set_maze_state("reset")
                     if keys[pygame.K_LCTRL] and keys[pygame.K_c]:
-                        self.clear_maze()
+                        self.set_maze_state("clear")
 
             self.update_gui()
 

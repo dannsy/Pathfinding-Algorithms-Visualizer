@@ -3,6 +3,7 @@ implementation of 4 graph traversal/pathfinding algorithms: Depth-first search,
 Breath-first search, Dijkstra's algorithm, and A* pathfinding algorithm
 """
 import random
+import sys
 import time
 from collections import deque, namedtuple
 from queue import PriorityQueue
@@ -107,9 +108,9 @@ class Algorithms:
         self.num_cols = num_cols
 
         self.nodes = np.zeros((num_rows, num_cols), dtype=Algorithms.Node)
-        for row in range(num_rows):
-            for col in range(num_cols):
-                self.nodes[row, col] = Algorithms.Node(row, col)
+        for i in range(num_rows):
+            for j in range(num_cols):
+                self.nodes[i, j] = Algorithms.Node(i, j)
         # 2D array to mark visited nodes
         self.visited = np.zeros((num_rows, num_cols), dtype=bool)
         # 2D array to mark each nodes previous node (parent)
@@ -135,18 +136,22 @@ class Algorithms:
 
         self.solved = False
 
-    def clear_maze(self):
-        """Clears the entire maze so remove all walls and visited
+    def set_maze_state(self, opt):
+        """Clears or resets maze
+
+        Args:
+            opt (str): "clear" to clear maze, "reset" to reset maze
         """
         longest_dist = (self.num_rows * self.num_cols) * 10
 
         # clearing all data structures used in pathfinding
-        for row in range(self.num_rows):
-            for col in range(self.num_cols):
-                self.nodes[row, col].mode = 0
-                self.visited[row, col] = False
-                self.paths[row, col] = 0
-                self.shortest_dists[row, col] = longest_dist
+        for i in range(self.num_rows):
+            for j in range(self.num_cols):
+                if opt == "clear" or (opt == "reset" and self.nodes[i, j].mode != 1):
+                    self.nodes[i, j].mode = 0
+                    self.visited[i, j] = False
+                    self.paths[i, j] = 0
+                    self.shortest_dists[i, j] = longest_dist
 
         self.count = 0
         self.start.mode = 2
@@ -156,27 +161,23 @@ class Algorithms:
         self.cur_node = None
         self.target_node = None
 
-    def reset_maze(self):
-        """Resets maze so only start, end and walls remain
+    def follow_path(self, pointer, length):
+        """Helper function for both print paths
+
+        Args:
+            pointer (Node): the current node to find parent of
+            length (int): current path length
+
+        Returns:
+            (Node, int): parent of current node and updated path length
         """
-        longest_dist = (self.num_rows * self.num_cols) * 10
+        # while there is still a previous node, keep printing
+        pointer_row, pointer_col = pointer.get_pos()
+        pointer.mode = 4
+        pointer = self.paths[pointer_row, pointer_col]
 
-        # resetting all data structures used in pathfinding, taking walls into account
-        for row in range(self.num_rows):
-            for col in range(self.num_cols):
-                if self.nodes[row, col].mode != 1:
-                    self.nodes[row, col].mode = 0
-                    self.visited[row, col] = False
-                    self.paths[row, col] = 0
-                    self.shortest_dists[row, col] = longest_dist
-
-        self.count = 0
-        self.start.mode = 2
-        self.end.mode = 3
-        self.solved = False
-
-        self.cur_node = None
-        self.target_node = None
+        self.update_gui()
+        return pointer, length + 1
 
     def print_path(self):
         """Print the shortest path on screen
@@ -186,13 +187,7 @@ class Algorithms:
         length = 2
 
         while pointer not in (0, self.start):
-            length += 1
-            # while there is still a previous node, keep printing
-            pointer_row, pointer_col = pointer.get_pos()
-            pointer.mode = 4
-            pointer = self.paths[pointer_row, pointer_col]
-
-            self.update_gui()
+            pointer, length = self.follow_path(pointer, length)
 
         if pointer == self.start:
             print(f"Path found! Length of path is : {length}")
@@ -216,32 +211,82 @@ class Algorithms:
             length = 4
 
             while pointer0 not in (0, self.start, self.end):
-                length += 1
-                # while there is still a previous node, keep printing
-                pointer_row, pointer_col = pointer0.get_pos()
-                pointer0.mode = 4
-                pointer0 = self.paths[pointer_row, pointer_col]
-
-                self.update_gui()
+                pointer0, length = self.follow_path(pointer0, length)
 
             while pointer1 not in (0, self.start, self.end):
-                length += 1
-                # while there is still a previous node, keep printing
-                pointer_row, pointer_col = pointer1.get_pos()
-                pointer1.mode = 4
-                pointer1 = self.paths[pointer_row, pointer_col]
-
-                self.update_gui()
+                pointer1, length = self.follow_path(pointer1, length)
 
             print(f"Path found! Length of path is : {length}")
 
         self.solved = True
 
+    def get_neighbors(self, node, func, **kwargs):
+        """Template of the get neighbors function for non-bi algorithms
+
+        Args:
+            node (Node): current node being evaluated
+            func (def): unique function to be called within this template for
+            each algorithm
+        """
+        row, col = node.get_pos()
+        end_row, end_col, new_dist = None, None, None
+        if kwargs.get("get_dist"):
+            new_dist = self.shortest_dists[row, col] + 1
+        if kwargs.get("end"):
+            end_row, end_col = self.end.get_pos()
+
+        if col != self.num_cols - 1:
+            func(node, row, col + 1, new_dist, end_row, end_col)
+
+        if row != 0:
+            func(node, row - 1, col, new_dist, end_row, end_col)
+
+        if col != 0:
+            func(node, row, col - 1, new_dist, end_row, end_col)
+
+        if row != self.num_rows - 1:
+            func(node, row + 1, col, new_dist, end_row, end_col)
+
+    def bi_get_neighbors(self, node, func, **kwargs):
+        """Template of the get neighbors function for bi-directional algorithms
+
+        Args:
+            node (Node): current node being evaluated
+            func (def): unique function to be called within this template for
+            each algorithm
+        """
+        row, col = node.get_pos()
+        end_row, end_col, new_dist = None, None, None
+        if kwargs.get("get_dist"):
+            new_dist = self.shortest_dists[row, col] + 1
+        if kwargs.get("end"):
+            end_row, end_col = self.end.get_pos()
+        mode = kwargs.get("mode")
+        end_row, end_col = self.end.get_pos() if mode == 6 else self.start.get_pos()
+
+        if col != self.num_cols - 1:
+            if func(node, row, col + 1, new_dist, end_row, end_col, mode):
+                return True
+
+        if row != 0:
+            if func(node, row - 1, col, new_dist, end_row, end_col, mode):
+                return True
+
+        if col != 0:
+            if func(node, row, col - 1, new_dist, end_row, end_col, mode):
+                return True
+
+        if row != self.num_rows - 1:
+            if func(node, row + 1, col, new_dist, end_row, end_col, mode):
+                return True
+
+        return False
+
     @_timer
     def bfs(self):
         """Breadth-first-search algorithm
         """
-        self.reset_maze()
+        self.set_maze_state("reset")
         self.queue = deque()
         self.queue.append(self.start)
         row, col = self.start.get_pos()
@@ -249,72 +294,44 @@ class Algorithms:
 
         while self.queue:
             for event in pygame.event.get():
+                # while algorithm is running, need to make sure quit command is heeded
                 if event.type == pygame.QUIT:
                     pygame.quit()
+                    sys.exit()
 
             # repeatedly get first element in queue and get neighbors
             cur_node = self.queue.popleft()
-
             if cur_node is self.end:
                 # found end node
                 break
-
-            self.bfs_get_neighbors(cur_node)
+            self.get_neighbors(cur_node, self.bfs_get_neighbors)
             cur_node.mode = 5
 
             self.update_gui()
 
         self.print_path()
 
-    def bfs_get_neighbors(self, node):
-        """Get all valid neighbors of a node
+    def bfs_get_neighbors(self, node, row, col, *_):
+        """Helper function for breadth-first search to get all neighbors
 
         Args:
-            node (Node): target node to get neighbors of
+            node (Node): current node being evaluated
+            row (int): row of neighbor node
+            col (int): column of neighbor node
         """
-        row, col = node.get_pos()
-
-        if col != self.num_cols - 1:
-            right_node = self.nodes[row, col + 1]
-            if right_node.mode != 1 and not self.visited[row, col + 1]:
-                # only add node if node is unvisited and isn't a wall
-                right_node.mode = 6
-                self.queue.append(right_node)
-                self.visited[row, col + 1] = True
-                self.paths[row, col + 1] = node
-
-        if row != 0:
-            above_node = self.nodes[row - 1, col]
-            if above_node.mode != 1 and not self.visited[row - 1, col]:
-                # only add node if node is unvisited and isn't a wall
-                above_node.mode = 6
-                self.queue.append(above_node)
-                self.visited[row - 1, col] = True
-                self.paths[row - 1, col] = node
-
-        if col != 0:
-            left_node = self.nodes[row, col - 1]
-            if left_node.mode != 1 and not self.visited[row, col - 1]:
-                # only add node if node is unvisited and isn't a wall
-                left_node.mode = 6
-                self.queue.append(left_node)
-                self.visited[row, col - 1] = True
-                self.paths[row, col - 1] = node
-
-        if row != self.num_rows - 1:
-            below_node = self.nodes[row + 1, col]
-            if below_node.mode != 1 and not self.visited[row + 1, col]:
-                # only add node if node is unvisited and isn't a wall
-                below_node.mode = 6
-                self.queue.append(below_node)
-                self.visited[row + 1, col] = True
-                self.paths[row + 1, col] = node
+        n_node = self.nodes[row, col]
+        if n_node.mode != 1 and not self.visited[row, col]:
+            # only add node if neighbor node is unvisited and isn't a wall
+            n_node.mode = 6
+            self.queue.append(n_node)
+            self.visited[row, col] = True
+            self.paths[row, col] = node
 
     @_timer
     def dfs(self):
         """Depth-first-search algorithm
         """
-        self.reset_maze()
+        self.set_maze_state("reset")
         self.queue = deque()
         self.queue.append(self.start)
         row, col = self.start.get_pos()
@@ -322,19 +339,18 @@ class Algorithms:
 
         while self.queue:
             for event in pygame.event.get():
+                # while algorithm is running, need to make sure quit command is heeded
                 if event.type == pygame.QUIT:
                     pygame.quit()
+                    sys.exit()
 
             # repeatedly get last element in queue and get nieghbors
             cur_node = self.queue.pop()
-
             if cur_node is self.end:
                 # found end node
                 break
-
-            self.dfs_get_neighbors(cur_node)
+            self.get_neighbors(cur_node, self.dfs_get_neighbors)
             cur_node.mode = 5
-
             row, col = cur_node.get_pos()
             self.visited[row, col] = True
 
@@ -342,51 +358,26 @@ class Algorithms:
 
         self.print_path()
 
-    def dfs_get_neighbors(self, node):
-        """Get all valid neighbors of a node
+    def dfs_get_neighbors(self, node, row, col, *_):
+        """Helper function for depth-first search to get all neighbors
 
         Args:
-            node (Node): target node to get neighbors of
+            node (Node): current node being evaluated
+            row (int): row of neighbor node
+            col (int): column of neighbor node
         """
-        row, col = node.get_pos()
-
-        if col != self.num_cols - 1:
-            right_node = self.nodes[row, col + 1]
-            if right_node.mode != 1 and not self.visited[row, col + 1]:
-                # only add node if node is unvisited and isn't a wall
-                right_node.mode = 6
-                self.queue.append(right_node)
-                self.paths[row, col + 1] = node
-
-        if row != 0:
-            above_node = self.nodes[row - 1, col]
-            if above_node.mode != 1 and not self.visited[row - 1, col]:
-                # only add node if node is unvisited and isn't a wall
-                above_node.mode = 6
-                self.queue.append(above_node)
-                self.paths[row - 1, col] = node
-
-        if col != 0:
-            left_node = self.nodes[row, col - 1]
-            if left_node.mode != 1 and not self.visited[row, col - 1]:
-                # only add node if node is unvisited and isn't a wall
-                left_node.mode = 6
-                self.queue.append(left_node)
-                self.paths[row, col - 1] = node
-
-        if row != self.num_rows - 1:
-            below_node = self.nodes[row + 1, col]
-            if below_node.mode != 1 and not self.visited[row + 1, col]:
-                # only add node if node is unvisited and isn't a wall
-                below_node.mode = 6
-                self.queue.append(below_node)
-                self.paths[row + 1, col] = node
+        n_node = self.nodes[row, col]
+        if n_node.mode != 1 and not self.visited[row, col]:
+            # only add node if node is unvisited and isn't a wall
+            n_node.mode = 6
+            self.queue.append(n_node)
+            self.paths[row, col] = node
 
     @_timer
     def dijkstra(self):
         """Dijkstra's algorithm
         """
-        self.reset_maze()
+        self.set_maze_state("reset")
         row, col = self.start.get_pos()
         self.shortest_dists[row, col] = 0
         self.queue = PriorityQueue()
@@ -394,17 +385,16 @@ class Algorithms:
 
         while not self.queue.empty():
             for event in pygame.event.get():
+                # while algorithm is running, need to make sure quit command is heeded
                 if event.type == pygame.QUIT:
                     pygame.quit()
+                    sys.exit()
             # repeatedly get element with shortest distance and get neighbors
             cur_node = self.queue.get()[2]
-
             if cur_node is self.end:
                 break
-
-            self.dij_get_neighbors(cur_node)
+            self.get_neighbors(cur_node, self.dij_get_neighbors, get_dist=True)
             cur_node.mode = 5
-
             row, col = cur_node.get_pos()
             self.visited[row, col] = True
 
@@ -412,68 +402,31 @@ class Algorithms:
 
         self.print_path()
 
-    def dij_get_neighbors(self, node):
-        """Get all valid neighbors of a node
+    def dij_get_neighbors(self, node, row, col, new_dist, *_):
+        """Helper function for Dijstra's algorithm to get all neighbors
 
         Args:
-            node (Node): target node to get neighbors of
+            node (Node): current node being evaluated
+            row (int): row of neighbor node
+            col (int): column of neighbor node
+            new_dist (int): potential new shortest distance to current node
         """
-        row, col = node.get_pos()
-        new_dist = self.shortest_dists[row, col] + 1
-
-        if col != self.num_cols - 1:
-            right_node = self.nodes[row, col + 1]
-            dist_bool = new_dist < self.shortest_dists[row, col + 1]
-            if right_node.mode != 1 and not self.visited[row, col + 1] and dist_bool:
-                # only add node if node is unvisited, isn't a wall,
-                # and has current shortest path longer than new dist
-                right_node.mode = 6
-                self.count += 1
-                self.queue.put((new_dist, self.count, right_node))
-                self.paths[row, col + 1] = node
-                self.shortest_dists[row, col + 1] = new_dist
-
-        if row != 0:
-            above_node = self.nodes[row - 1, col]
-            dist_bool = new_dist < self.shortest_dists[row - 1, col]
-            if above_node.mode != 1 and not self.visited[row - 1, col] and dist_bool:
-                # only add node if node is unvisited, isn't a wall
-                # and has current shortest path longer than new dist
-                above_node.mode = 6
-                self.count += 1
-                self.queue.put((new_dist, self.count, above_node))
-                self.paths[row - 1, col] = node
-                self.shortest_dists[row - 1, col] = new_dist
-
-        if col != 0:
-            left_node = self.nodes[row, col - 1]
-            dist_bool = new_dist < self.shortest_dists[row, col - 1]
-            if left_node.mode != 1 and not self.visited[row, col - 1] and dist_bool:
-                # only add node if node is unvisited, isn't a wall
-                # and has current shortest path longer than new dist
-                left_node.mode = 6
-                self.count += 1
-                self.queue.put((new_dist, self.count, left_node))
-                self.paths[row, col - 1] = node
-                self.shortest_dists[row, col - 1] = new_dist
-
-        if row != self.num_rows - 1:
-            below_node = self.nodes[row + 1, col]
-            dist_bool = new_dist < self.shortest_dists[row + 1, col]
-            if below_node.mode != 1 and not self.visited[row + 1, col] and dist_bool:
-                # only add node if node is unvisited, isn't a wall
-                # and has current shortest path longer than new dist
-                below_node.mode = 6
-                self.count += 1
-                self.queue.put((new_dist, self.count, below_node))
-                self.paths[row + 1, col] = node
-                self.shortest_dists[row + 1, col] = new_dist
+        n_node = self.nodes[row, col]
+        dist_bool = new_dist < self.shortest_dists[row, col]
+        if n_node.mode != 1 and not self.visited[row, col] and dist_bool:
+            # only add node if node is unvisited, isn't a wall,
+            # and has current shortest path longer than new dist
+            n_node.mode = 6
+            self.count += 1
+            self.queue.put((new_dist, self.count, n_node))
+            self.paths[row, col] = node
+            self.shortest_dists[row, col] = new_dist
 
     @_timer
     def astar(self):
         """A* pathfinding algorithm
         """
-        self.reset_maze()
+        self.set_maze_state("reset")
         row, col = self.start.get_pos()
         self.shortest_dists[row, col] = 0
         self.queue = PriorityQueue()
@@ -481,17 +434,18 @@ class Algorithms:
 
         while not self.queue.empty():
             for event in pygame.event.get():
+                # while algorithm is running, need to make sure quit command is heeded
                 if event.type == pygame.QUIT:
                     pygame.quit()
+                    sys.exit()
             # repeatedly get element with lowest f score and get neighbors
             cur_node = self.queue.get()[2]
-
             if cur_node is self.end:
                 break
-
-            self.astar_get_neighbors(cur_node)
+            self.get_neighbors(
+                cur_node, self.astar_get_neighbors, get_dist=True, end=True
+            )
             cur_node.mode = 5
-
             row, col = cur_node.get_pos()
             self.visited[row, col] = True
 
@@ -499,73 +453,34 @@ class Algorithms:
 
         self.print_path()
 
-    def astar_get_neighbors(self, node):
-        """Get all valid neighbors of a node
+    def astar_get_neighbors(self, node, row, col, new_dist, end_row, end_col, *_):
+        """Helper function for A* algorithm to get all neighbors
 
         Args:
-            node (Node): target node to get neighbors of
+            node (Node): current node being evaluated
+            row (int): row of neighbor node
+            col (int): column of neighbor node
+            new_dist (int): potential new shortest distance to current node
+            end_row (int): row of end node
+            end_col (int): column of end node
         """
-        row, col = node.get_pos()
-        end_row, end_col = self.end.get_pos()
-        new_dist = self.shortest_dists[row, col] + 1
-
-        if col != self.num_cols - 1:
-            right_node = self.nodes[row, col + 1]
-            dist_bool = new_dist < self.shortest_dists[row, col + 1]
-            if right_node.mode != 1 and not self.visited[row, col + 1] and dist_bool:
-                # only add node if node is unvisited, isn't a wall
-                # and has current shortest path longer than new dist
-                right_node.mode = 6
-                self.count += 1
-                heuristic = self.manhattan_dist(row, col + 1, end_row, end_col)
-                self.queue.put((new_dist + heuristic, self.count, right_node))
-                self.paths[row, col + 1] = node
-                self.shortest_dists[row, col + 1] = new_dist
-
-        if row != 0:
-            above_node = self.nodes[row - 1, col]
-            dist_bool = new_dist < self.shortest_dists[row - 1, col]
-            if above_node.mode != 1 and not self.visited[row - 1, col] and dist_bool:
-                # only add node if node is unvisited, isn't a wall
-                # and has current shortest path longer than new dist
-                above_node.mode = 6
-                self.count += 1
-                heuristic = self.manhattan_dist(row - 1, col, end_row, end_col)
-                self.queue.put((new_dist + heuristic, self.count, above_node))
-                self.paths[row - 1, col] = node
-                self.shortest_dists[row - 1, col] = new_dist
-
-        if col != 0:
-            left_node = self.nodes[row, col - 1]
-            dist_bool = new_dist < self.shortest_dists[row, col - 1]
-            if left_node.mode != 1 and not self.visited[row, col - 1] and dist_bool:
-                # only add node if node is unvisited, isn't a wall
-                # and has current shortest path longer than new dist
-                left_node.mode = 6
-                self.count += 1
-                heuristic = self.manhattan_dist(row, col - 1, end_row, end_col)
-                self.queue.put((new_dist + heuristic, self.count, left_node))
-                self.paths[row, col - 1] = node
-                self.shortest_dists[row, col - 1] = new_dist
-
-        if row != self.num_rows - 1:
-            below_node = self.nodes[row + 1, col]
-            dist_bool = new_dist < self.shortest_dists[row + 1, col]
-            if below_node.mode != 1 and not self.visited[row + 1, col] and dist_bool:
-                # only add node if node is unvisited, isn't a wall
-                # and has current shortest path longer than new dist
-                below_node.mode = 6
-                self.count += 1
-                heuristic = self.manhattan_dist(row + 1, col, end_row, end_col)
-                self.queue.put((new_dist + heuristic, self.count, below_node))
-                self.paths[row + 1, col] = node
-                self.shortest_dists[row + 1, col] = new_dist
+        n_node = self.nodes[row, col]
+        dist_bool = new_dist < self.shortest_dists[row, col]
+        if n_node.mode != 1 and not self.visited[row, col] and dist_bool:
+            # only add node if node is unvisited, isn't a wall
+            # and has current shortest path longer than new dist
+            n_node.mode = 6
+            self.count += 1
+            heuristic = self.manhattan_dist(row, col, end_row, end_col)
+            self.queue.put((new_dist + heuristic, self.count, n_node))
+            self.paths[row, col] = node
+            self.shortest_dists[row, col] = new_dist
 
     @_timer
     def bi_astar(self):
         """Bi-directional A* pathfinding algorithm
         """
-        self.reset_maze()
+        self.set_maze_state("reset")
         start_row, start_col = self.start.get_pos()
         end_row, end_col = self.end.get_pos()
         self.shortest_dists[start_row, start_col] = 0
@@ -580,12 +495,14 @@ class Algorithms:
         turn = 0
         while True:
             for event in pygame.event.get():
+                # while algorithm is running, need to make sure quit command is heeded
                 if event.type == pygame.QUIT:
                     pygame.quit()
+                    sys.exit()
 
-            if turn % 2 == 0 and not self.bi_astar0():
+            if turn % 2 == 0 and not self.help_bi_astar(self.queue, 6):
                 break
-            elif turn % 2 == 1 and not self.bi_astar1():
+            elif turn % 2 == 1 and not self.help_bi_astar(self.queue2, 7):
                 break
             turn += 1
 
@@ -593,129 +510,66 @@ class Algorithms:
 
         self.bi_print_path()
 
-    def bi_astar0(self):
-        """Helper method for bi-directional A*, this method is A* for start node
+    def help_bi_astar(self, queue, mode):
+        """Helper method for bi-directional A*
 
         Returns:
             bool: True if target node isn't found and queue is not empty, else False
         """
-        if not self.queue.empty():
+        o_mode = 7 if mode == 6 else 6
+        if not queue.empty():
             # repeatedly get element with lowest f score and get neighbors
-            cur_node = self.queue.get()[2]
+            cur_node = queue.get()[2]
 
-            if cur_node.mode == 7 or self.bi_astar_get_neighbors(cur_node, 6):
+            if cur_node.mode == o_mode or self.bi_get_neighbors(
+                cur_node,
+                self.bi_astar_get_neighbors,
+                get_dist=True,
+                end=True,
+                mode=mode,
+            ):
                 return False
             cur_node.mode = 5
 
             row, col = cur_node.get_pos()
             self.visited[row, col] = True
             return True
+
         return False
 
-    def bi_astar1(self):
-        """Helper method for bi-directional A*, this method is A* for end node
-
-        Returns:
-            bool: True if target node isn't found and queue is not empty, else False
-        """
-        if not self.queue2.empty():
-            # repeatedly get element with lowest f score and get neighbors
-            cur_node = self.queue2.get()[2]
-
-            if cur_node.mode == 6 or self.bi_astar_get_neighbors(cur_node, 7):
-                return False
-
-            cur_node.mode = 5
-
-            row, col = cur_node.get_pos()
-            self.visited[row, col] = True
-            return True
-        return False
-
-    def bi_astar_get_neighbors(self, node, mode):
-        """Get all valid neighbors of a node
+    def bi_astar_get_neighbors(self, node, row, col, new_dist, end_row, end_col, mode):
+        """Helper function for A* algorithm to get all neighbors
 
         Args:
-            node (Node): target node to get neighbors of
-            mode (int): determines start or end node
-
-        Returns:
-            bool: True if target is found, else False
+            node (Node): current node being evaluated
+            row (int): row of neighbor node
+            col (int): column of neighbor node
+            new_dist (int): potential new shortest distance to current node
+            end_row (int): row of end node
+            end_col (int): column of end node
+            mode (int): 6 indicates start, 7 indicates end
         """
-        row, col = node.get_pos()
         if mode == 6:
-            end_row, end_col = self.end.get_pos()
-            queue = self.queue
             other_mode = 7
+            queue = self.queue
         else:
-            end_row, end_col = self.start.get_pos()
-            queue = self.queue2
             other_mode = 6
-        new_dist = self.shortest_dists[row, col] + 1
+            queue = self.queue2
 
-        if col != self.num_cols - 1:
-            right_node = self.nodes[row, col + 1]
-            dist_bool = new_dist < self.shortest_dists[row, col + 1]
-            if right_node.mode == other_mode:
-                self.cur_node, self.target_node = node, right_node
-                return True
-            if right_node.mode != 1 and not self.visited[row, col + 1] and dist_bool:
-                # only add node if node is unvisited, isn't a wall
-                # and has current shortest path longer than new dist
-                right_node.mode = mode
-                self.count += 1
-                heuristic = self.manhattan_dist(row, col + 1, end_row, end_col)
-                queue.put((new_dist + heuristic, self.count, right_node))
-                self.paths[row, col + 1] = node
-                self.shortest_dists[row, col + 1] = new_dist
-
-        if row != 0:
-            above_node = self.nodes[row - 1, col]
-            dist_bool = new_dist < self.shortest_dists[row - 1, col]
-            if above_node.mode == other_mode:
-                self.cur_node, self.target_node = node, above_node
-                return True
-            if above_node.mode != 1 and not self.visited[row - 1, col] and dist_bool:
-                # only add node if node is unvisited, isn't a wall
-                # and has current shortest path longer than new dist
-                above_node.mode = mode
-                self.count += 1
-                heuristic = self.manhattan_dist(row - 1, col, end_row, end_col)
-                queue.put((new_dist + heuristic, self.count, above_node))
-                self.paths[row - 1, col] = node
-                self.shortest_dists[row - 1, col] = new_dist
-
-        if col != 0:
-            left_node = self.nodes[row, col - 1]
-            dist_bool = new_dist < self.shortest_dists[row, col - 1]
-            if left_node.mode == other_mode:
-                self.cur_node, self.target_node = node, left_node
-                return True
-            if left_node.mode != 1 and not self.visited[row, col - 1] and dist_bool:
-                # only add node if node is unvisited, isn't a wall
-                # and has current shortest path longer than new dist
-                left_node.mode = mode
-                self.count += 1
-                heuristic = self.manhattan_dist(row, col - 1, end_row, end_col)
-                queue.put((new_dist + heuristic, self.count, left_node))
-                self.paths[row, col - 1] = node
-                self.shortest_dists[row, col - 1] = new_dist
-
-        if row != self.num_rows - 1:
-            below_node = self.nodes[row + 1, col]
-            dist_bool = new_dist < self.shortest_dists[row + 1, col]
-            if below_node.mode == other_mode:
-                self.cur_node, self.target_node = node, below_node
-                return True
-            if below_node.mode != 1 and not self.visited[row + 1, col] and dist_bool:
-                # only add node if node is unvisited, isn't a wall
-                # and has current shortest path longer than new dist
-                below_node.mode = mode
-                self.count += 1
-                heuristic = self.manhattan_dist(row + 1, col, end_row, end_col)
-                queue.put((new_dist + heuristic, self.count, below_node))
-                self.paths[row + 1, col] = node
-                self.shortest_dists[row + 1, col] = new_dist
+        n_node = self.nodes[row, col]
+        dist_bool = new_dist < self.shortest_dists[row, col]
+        if n_node.mode == other_mode:
+            self.cur_node, self.target_node = node, n_node
+            return True
+        if n_node.mode != 1 and not self.visited[row, col] and dist_bool:
+            # only add node if node is unvisited, isn't a wall
+            # and has current shortest path longer than new dist
+            n_node.mode = mode
+            self.count += 1
+            heuristic = self.manhattan_dist(row, col, end_row, end_col)
+            queue.put((new_dist + heuristic, self.count, n_node))
+            self.paths[row, col] = node
+            self.shortest_dists[row, col] = new_dist
 
         return False
 
@@ -761,7 +615,7 @@ class Algorithms:
             if mode == "normal":
                 self.visited[row, col] = True
 
-        self.reset_maze()
+        self.set_maze_state("reset")
 
     def maze_get_neighbors(self, node, mode):
         """Get all valid neighbors of a node for maze
