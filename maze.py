@@ -52,6 +52,16 @@ class Maze(Algorithms):
         self.width = width
         self.height = height + self.top_pad
         super(Maze, self).__init__(height // self.spacing, width // self.spacing)
+        self.but_list = [
+            (self.bfs_but, "BFS", self.bfs, None),
+            (self.dfs_but, "DFS", self.dfs, None),
+            (self.dij_but, "Dijkstra", self.dijkstra, None),
+            (self.astar_but, "A*", self.astar, None),
+            (self.bi_astar_but, "Bi-A*", self.bi_astar, None),
+            (self.per_but, "Perfect Maze", self.generate_maze, "perfect"),
+            (self.nor_but, "Normal Maze", self.generate_maze, "normal"),
+            (self.spa_but, "Sparse Maze", self.generate_maze, "sparse"),
+        ]
 
         self.display = pygame.display.set_mode((self.width, self.height))
         self.running = True
@@ -64,6 +74,7 @@ class Maze(Algorithms):
 
         Args:
             pos (tuple of int): pos[0] is the x position, pos[1] is the y position
+            delete (bool, optional): determine if deleting wall. Defaults to False.
         """
         if self.solved:
             # remove coloring of previously visited nodes
@@ -89,44 +100,27 @@ class Maze(Algorithms):
                     self.end = self.nodes[row, col]
                     self.end.mode = 3
 
-        # button click detection
-        elif self.bfs_but.collidepoint(pos):
-            self.bfs()
-        elif self.dfs_but.collidepoint(pos):
-            self.dfs()
-        elif self.dij_but.collidepoint(pos):
-            self.dijkstra()
-        elif self.astar_but.collidepoint(pos):
-            self.astar()
-        elif self.bi_astar_but.collidepoint(pos):
-            self.bi_astar()
-        elif self.per_but.collidepoint(pos):
-            self.generate_maze("perfect")
-        elif self.nor_but.collidepoint(pos):
-            self.generate_maze("normal")
-        elif self.spa_but.collidepoint(pos):
-            self.generate_maze("sparse")
+        for but, _, func, arg in self.but_list:
+            # detecting button clicks
+            if but.collidepoint(pos):
+                if arg is None:
+                    func()
+                else:
+                    func(arg)
 
     def draw_grid(self):
         """Drawing the grid lines of the maze
         """
         for i in range(self.num_rows):
             # drawing horizontal lines
-            pygame.draw.line(
-                self.display,
-                BLUE,
-                (0, self.top_pad + i * self.spacing),
-                (self.width, self.top_pad + i * self.spacing),
-                1,
-            )
+            start_pos = (0, self.top_pad + i * self.spacing)
+            end_pos = (self.width, self.top_pad + i * self.spacing)
+            pygame.draw.line(self.display, BLUE, start_pos, end_pos)
         for i in range(self.num_cols):
             # drawing vertical lines
-            pygame.draw.line(
-                self.display,
-                BLUE,
-                (i * self.spacing, self.top_pad),
-                (i * self.spacing, self.height),
-            )
+            start_pos = (i * self.spacing, self.top_pad)
+            end_pos = (i * self.spacing, self.height)
+            pygame.draw.line(self.display, BLUE, start_pos, end_pos)
 
     def draw_nodes(self):
         """Drawing the nodes (boxes) of the maze
@@ -174,49 +168,12 @@ class Maze(Algorithms):
     def draw_buts(self):
         """Drawing all buttons and their text
         """
-        # drawing all buttons
-        pygame.draw.rect(self.display, LIGHT_GREY, self.bfs_but)
-        pygame.draw.rect(self.display, LIGHT_GREY, self.dfs_but)
-        pygame.draw.rect(self.display, LIGHT_GREY, self.dij_but)
-        pygame.draw.rect(self.display, LIGHT_GREY, self.astar_but)
-        pygame.draw.rect(self.display, LIGHT_GREY, self.per_but)
-        pygame.draw.rect(self.display, LIGHT_GREY, self.nor_but)
-        pygame.draw.rect(self.display, LIGHT_GREY, self.spa_but)
-        pygame.draw.rect(self.display, LIGHT_GREY, self.bi_astar_but)
-
-        # drawing button text
-        text = self.font.render("DFS", True, BLACK)
-        text_x = self.dfs_x + (self.but_width - text.get_width()) // 2
-        text_y = self.but_y + (self.but_height - text.get_height()) // 2
-        self.display.blit(text, (text_x, text_y))
-        text = self.font.render("BFS", True, BLACK)
-        text_x = self.bfs_x + (self.but_width - text.get_width()) // 2
-        text_y = self.but_y + (self.but_height - text.get_height()) // 2
-        self.display.blit(text, (text_x, text_y))
-        text = self.font.render("Dijkstra", True, BLACK)
-        text_x = self.dij_x + (self.but_width - text.get_width()) // 2
-        text_y = self.but_y + (self.but_height - text.get_height()) // 2
-        self.display.blit(text, (text_x, text_y))
-        text = self.font.render("A*", True, BLACK)
-        text_x = self.astar_x + (self.but_width - text.get_width()) // 2
-        text_y = self.but_y + (self.but_height - text.get_height()) // 2
-        self.display.blit(text, (text_x, text_y))
-        text = self.font.render("Bi A*", True, BLACK)
-        text_x = self.bi_astar_x + (self.but_width - text.get_width()) // 2
-        text_y = self.but_y + (self.but_height - text.get_height()) // 2
-        self.display.blit(text, (text_x, text_y))
-        text = self.font.render("Perfect Maze", True, BLACK)
-        text_x = self.per_x + (int(self.but_width * 1.5) - text.get_width()) // 2
-        text_y = self.but_y + (self.but_height - text.get_height()) // 2
-        self.display.blit(text, (text_x, text_y))
-        text = self.font.render("Normal Maze", True, BLACK)
-        text_x = self.nor_x + (int(self.but_width * 1.5) - text.get_width()) // 2
-        text_y = self.but_y + (self.but_height - text.get_height()) // 2
-        self.display.blit(text, (text_x, text_y))
-        text = self.font.render("Sparse Maze", True, BLACK)
-        text_x = self.spa_x + (int(self.but_width * 1.5) - text.get_width()) // 2
-        text_y = self.but_y + (self.but_height - text.get_height()) // 2
-        self.display.blit(text, (text_x, text_y))
+        for but, content, *_ in self.but_list:
+            pygame.draw.rect(self.display, LIGHT_GREY, but)
+            text = self.font.render(content, True, BLACK)
+            text_x = but.centerx - text.get_width() // 2
+            text_y = but.centery - text.get_height() // 2
+            self.display.blit(text, (text_x, text_y))
 
     def draw_mode(self):
         """Drawing the current mode on top left hand corner
@@ -232,6 +189,12 @@ class Maze(Algorithms):
     def update_gui(self):
         """Updates the view of the maze
         """
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.running = False
+                pygame.quit()
+                sys.exit()
+
         self.display.fill(WHITE)
 
         self.draw_nodes()

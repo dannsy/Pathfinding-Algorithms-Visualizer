@@ -3,13 +3,11 @@ implementation of 4 graph traversal/pathfinding algorithms: Depth-first search,
 Breath-first search, Dijkstra's algorithm, and A* pathfinding algorithm
 """
 import random
-import sys
 import time
 from collections import deque, namedtuple
 from queue import PriorityQueue
 
 import numpy as np
-import pygame
 
 Color = namedtuple("Color", ["r", "g", "b"])
 WHITE = Color(240, 240, 240)
@@ -293,12 +291,6 @@ class Algorithms:
         self.visited[row, col] = True
 
         while self.queue:
-            for event in pygame.event.get():
-                # while algorithm is running, need to make sure quit command is heeded
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-
             # repeatedly get first element in queue and get neighbors
             cur_node = self.queue.popleft()
             if cur_node is self.end:
@@ -338,12 +330,6 @@ class Algorithms:
         self.visited[row, col] = True
 
         while self.queue:
-            for event in pygame.event.get():
-                # while algorithm is running, need to make sure quit command is heeded
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-
             # repeatedly get last element in queue and get nieghbors
             cur_node = self.queue.pop()
             if cur_node is self.end:
@@ -384,11 +370,6 @@ class Algorithms:
         self.queue.put((0, self.count, self.start))
 
         while not self.queue.empty():
-            for event in pygame.event.get():
-                # while algorithm is running, need to make sure quit command is heeded
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
             # repeatedly get element with shortest distance and get neighbors
             cur_node = self.queue.get()[2]
             if cur_node is self.end:
@@ -433,11 +414,6 @@ class Algorithms:
         self.queue.put((0, self.count, self.start))
 
         while not self.queue.empty():
-            for event in pygame.event.get():
-                # while algorithm is running, need to make sure quit command is heeded
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
             # repeatedly get element with lowest f score and get neighbors
             cur_node = self.queue.get()[2]
             if cur_node is self.end:
@@ -494,12 +470,6 @@ class Algorithms:
 
         turn = 0
         while True:
-            for event in pygame.event.get():
-                # while algorithm is running, need to make sure quit command is heeded
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-
             if turn % 2 == 0 and not self.help_bi_astar(self.queue, 6):
                 break
             elif turn % 2 == 1 and not self.help_bi_astar(self.queue2, 7):
