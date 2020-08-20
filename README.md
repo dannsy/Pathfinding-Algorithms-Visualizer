@@ -1,6 +1,6 @@
 # Pathfinding-Algorithms-Visualizer
 Implemented some popular pathfinding algorithms and visualizer for a 2D grid. 
-Players can determine start and end positions on grid, as well as build walls.
+Players can draw walls on the grid, or alternatively generate mazes. After that, determine the start and end positions on the grid and choose from 5 different pathfinding algorithms!
 Get the required dependencies from "requirements.txt" and run "maze.py" to see pathfinding in action!
 
 # Key-bindings
